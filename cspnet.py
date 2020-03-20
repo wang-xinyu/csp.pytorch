@@ -1,10 +1,82 @@
 import torch
 import math
 import torch.nn as nn
-import h5py
-import numpy as np
-#from resnet import *
 from l2norm import L2Norm
+from samepad import SamePad2d
+
+class IdentityBlock(nn.Module):
+    expansion = 4
+    def __init__(self, inchannels, filters, dila=1):
+        super(IdentityBlock, self).__init__()
+        self.conv1 = nn.Conv2d(inchannels, filters, kernel_size=1)
+        self.bn1 = nn.BatchNorm2d(filters, eps=1e-03, momentum=0.01)
+        self.samepad = SamePad2d(3, 1, dilation=dila)
+        self.conv2 = nn.Conv2d(filters, filters, kernel_size=3, dilation=dila)
+        self.bn2 = nn.BatchNorm2d(filters, eps=1e-03, momentum=0.01)
+        self.conv3 = nn.Conv2d(filters, filters * self.expansion, kernel_size=1)
+        self.bn3 = nn.BatchNorm2d(filters * self.expansion, eps=1e-03, momentum=0.01)
+        self.relu = nn.ReLU(inplace=True)
+
+    def forward(self, x):
+        out = self.conv1(x)
+        out = self.bn1(out)
+        out = self.relu(out)
+
+        print('a shape --- ', out.shape)
+        out = self.samepad(out)
+        print('b shape --- ', out.shape)
+        out = self.conv2(out)
+        print('c shape --- ', out.shape)
+        out = self.bn2(out)
+        out = self.relu(out)
+
+        out = self.conv3(out)
+        out = self.bn3(out)
+
+        out += x
+        out = self.relu(out)
+
+        return out
+
+class ConvBlock(nn.Module):
+    expansion = 4
+    def __init__(self, inchannels, filters, s=2, dila=1):
+        super(ConvBlock, self).__init__()
+        self.conv1 = nn.Conv2d(inchannels, filters, kernel_size=1, stride=s)
+        self.bn1 = nn.BatchNorm2d(filters, eps=1e-03, momentum=0.01)
+        self.samepad = SamePad2d(3, 1, dilation=dila)
+        self.conv2 = nn.Conv2d(filters, filters, kernel_size=3, dilation=dila)
+        self.bn2 = nn.BatchNorm2d(filters, eps=1e-03, momentum=0.01)
+        self.conv3 = nn.Conv2d(filters, filters * self.expansion, kernel_size=1)
+        self.bn3 = nn.BatchNorm2d(filters * self.expansion, eps=1e-03, momentum=0.01)
+        self.conv4 = nn.Conv2d(inchannels, filters * self.expansion, kernel_size=1, stride=s)
+        self.bn4 = nn.BatchNorm2d(filters * self.expansion, eps=1e-03, momentum=0.01)
+        self.relu = nn.ReLU(inplace=True)
+
+    def forward(self, x):
+        out = self.conv1(x)
+        out = self.bn1(out)
+        out = self.relu(out)
+
+        print('a shape --- ', out.shape)
+        out = self.samepad(out)
+        print('b shape --- ', out.shape)
+        out = self.conv2(out)
+        print('c shape --- ', out.shape)
+        out = self.bn2(out)
+        out = self.relu(out)
+
+        out = self.conv3(out)
+        out = self.bn3(out)
+
+        shortcut = self.conv4(x)
+        shortcut = self.bn4(shortcut)
+        print('shortcut shape --- ', shortcut.shape)
+
+        out += shortcut
+        out = self.relu(out)
+
+        return out
 
 
 class CSPNet_p3p4p5(nn.Module):
@@ -14,13 +86,30 @@ class CSPNet_p3p4p5(nn.Module):
         #resnet = resnet50(pretrained=True, receptive_keep=True)
 
         self.conv1 = nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3)
-        #self.bn1 = resnet.bn1
-        #self.relu = resnet.relu
-        #self.maxpool = resnet.maxpool
-        #self.layer1 = resnet.layer1
-        #self.layer2 = resnet.layer2
-        #self.layer3 = resnet.layer3
-        #self.layer4 = resnet.layer4
+        self.bn1 = nn.BatchNorm2d(64, eps=1e-03, momentum=0.01)
+        self.relu = nn.ReLU(inplace=True)
+        self.samepad1 = SamePad2d(3, 2)
+        self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2)
+
+        self.convblk2a = ConvBlock(64, 64, s=1)
+        self.identityblk2b = IdentityBlock(256, 64)
+        self.identityblk2c = IdentityBlock(256, 64)
+
+        self.convblk3a = ConvBlock(256, 128)
+        self.identityblk3b = IdentityBlock(512, 128)
+        self.identityblk3c = IdentityBlock(512, 128)
+        self.identityblk3d = IdentityBlock(512, 128)
+
+        self.convblk4a = ConvBlock(512, 256)
+        self.identityblk4b = IdentityBlock(1024, 256)
+        self.identityblk4c = IdentityBlock(1024, 256)
+        self.identityblk4d = IdentityBlock(1024, 256)
+        self.identityblk4e = IdentityBlock(1024, 256)
+        self.identityblk4f = IdentityBlock(1024, 256)
+
+        self.convblk5a = ConvBlock(1024, 512, s=1, dila=2)
+        self.identityblk5b = IdentityBlock(2048, 512, dila=2)
+        self.identityblk5c = IdentityBlock(2048, 512, dila=2)
 
         self.p3 = nn.ConvTranspose2d(512, 256, kernel_size=4, stride=2, padding=1)
         self.p4 = nn.ConvTranspose2d(1024, 256, kernel_size=4, stride=4, padding=0)
@@ -37,56 +126,70 @@ class CSPNet_p3p4p5(nn.Module):
         self.p4_l2 = L2Norm(256, 10)
         self.p5_l2 = L2Norm(256, 10)
 
-        self.feat = nn.Conv2d(768, 256, kernel_size=3, stride=1, padding=1, bias=False)
-        self.feat_bn = nn.BatchNorm2d(256, momentum=0.01)
-        self.feat_act = nn.ReLU(inplace=True)
+        self.feat = nn.Conv2d(768, 256, kernel_size=3, stride=1, padding=1)
+        self.feat_bn = nn.BatchNorm2d(256, eps=1e-03, momentum=0.01)
 
-        self.pos_conv = nn.Conv2d(256, 1, kernel_size=1)
-        self.reg_conv = nn.Conv2d(256, 1, kernel_size=1)
-        self.off_conv = nn.Conv2d(256, 2, kernel_size=1)
+        self.center_conv = nn.Conv2d(256, 1, kernel_size=1)
+        self.height_conv = nn.Conv2d(256, 1, kernel_size=1)
+        self.offset_conv = nn.Conv2d(256, 2, kernel_size=1)
 
         nn.init.xavier_normal_(self.feat.weight)
-        nn.init.xavier_normal_(self.pos_conv.weight)
-        nn.init.xavier_normal_(self.reg_conv.weight)
-        nn.init.xavier_normal_(self.off_conv.weight)
-        nn.init.constant_(self.pos_conv.bias, -math.log(0.99/0.01))
-        nn.init.constant_(self.reg_conv.bias, 0)
-        nn.init.constant_(self.off_conv.bias, 0)
+        nn.init.xavier_normal_(self.center_conv.weight)
+        nn.init.xavier_normal_(self.height_conv.weight)
+        nn.init.xavier_normal_(self.offset_conv.weight)
+        nn.init.constant_(self.center_conv.bias, -math.log(0.99/0.01))
+        nn.init.constant_(self.height_conv.bias, 0)
+        nn.init.constant_(self.offset_conv.bias, 0)
 
     def forward(self, x):
         x = self.conv1(x)
-        x = x.permute(0, 2, 3, 1)
-        return x
-        #x = self.bn1(x)
-        #x = self.relu(x)
-        #x = self.maxpool(x)
+        x = self.bn1(x)
+        x = self.relu(x)
+        x = self.samepad1(x)
+        x = self.maxpool(x)
 
-        #x = self.layer1(x)
+        x = self.convblk2a(x)
+        x = self.identityblk2b(x)
+        stage2 = self.identityblk2c(x)
 
-        #x = self.layer2(x)
-        #p3 = self.p3(x)
-        #p3 = self.p3_l2(p3)
+        x = self.convblk3a(stage2)
+        x = self.identityblk3b(x)
+        x = self.identityblk3c(x)
+        stage3 = self.identityblk3d(x)
 
-        #x = self.layer3(x)
-        #p4 = self.p4(x)
-        #p4 = self.p4_l2(p4)
+        x = self.convblk4a(stage3)
+        x = self.identityblk4b(x)
+        x = self.identityblk4c(x)
+        x = self.identityblk4d(x)
+        x = self.identityblk4e(x)
+        stage4 = self.identityblk4f(x)
 
-        #x = self.layer4(x)
-        #p5 = self.p5(x)
-        #p5 = self.p5_l2(p5)
+        x = self.convblk5a(stage4)
+        x = self.identityblk5b(x)
+        stage5 = self.identityblk5c(x)
 
-        #cat = torch.cat([p3, p4, p5], dim=1)
+        p3up = self.p3(stage3)
+        p4up = self.p4(stage4)
+        p5up = self.p5(stage5)
+        p3up = self.p3_l2(p3up)
+        p4up = self.p4_l2(p4up)
+        p5up = self.p5_l2(p5up)
+        cat = torch.cat([p3up, p4up, p5up], dim=1)
 
-        #feat = self.feat(cat)
-        #feat = self.feat_bn(feat)
-        #feat = self.feat_act(feat)
+        feat = self.feat(cat)
+        feat = self.feat_bn(feat)
+        feat = self.relu(feat)
 
-        #x_cls = self.pos_conv(feat)
-        #x_cls = torch.sigmoid(x_cls)
-        #x_reg = self.reg_conv(feat)
-        #x_off = self.off_conv(feat)
+        x_cls = self.center_conv(feat)
+        x_cls = torch.sigmoid(x_cls)
+        x_reg = self.height_conv(feat)
+        x_off = self.offset_conv(feat)
 
-        #return x_cls, x_reg, x_off
+        x_cls = x_cls.permute(0, 2, 3, 1)
+        x_reg = x_reg.permute(0, 2, 3, 1)
+        x_off = x_off.permute(0, 2, 3, 1)
+
+        return x_cls, x_reg, x_off
 
     # def train(self, mode=True):
     #     # Override train so that the training mode is set as we want
@@ -104,32 +207,4 @@ class CSPNet_p3p4p5(nn.Module):
     #             else:
     #                 m.eval()
     #         self.layer1.apply(set_bn_train)
-    def load_keras_weights(self, weights_path):
-        with h5py.File(weights_path, 'r') as f:
-            #model_weights = f['model_weights']
-            #layer_names = list(map(str, model_weights.keys()))
-            #state_dict = OrderedDict()
-            
-            print(f.attrs['layer_names'])
-            print(f['conv1'].attrs.keys())
-            print(f['conv1'].attrs['weight_names'])
-            print(f['conv1']['conv1_1/kernel:0'])
-
-            w = np.asarray(f['conv1']['conv1_1/kernel:0'], dtype='float32')
-            b = np.asarray(f['conv1']['conv1_1/bias:0'], dtype='float32')
-            self.conv1.weight = torch.nn.Parameter(torch.from_numpy(w).permute(3, 2, 0, 1))
-            self.conv1.bias = torch.nn.Parameter(torch.from_numpy(b))
-            print('b shape ', b.shape)
-
-
-            print(self.conv1.weight.shape)
-            print(self.conv1.bias.shape)
-            #print('weight, ', self.conv1.weight.permute(2, 3, 1, 0))
-            #print('bias, ', self.conv1.bias)
-            #num_w = conv_layer.weight.numel()
-            #conv_w = torch.from_numpy(weights[ptr:ptr + num_w]).view_as(conv_layer.weight)
-            #conv_layer.weight.data.copy_(conv_w)
-
-
-
 

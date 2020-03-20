@@ -2,6 +2,7 @@ import torch
 import cv2
 import numpy as np
 from cspnet import CSPNet_p3p4p5
+from keras_weights_loader import load_keras_weights
 
 
 img_channel_mean = [103.939, 116.779, 123.68]
@@ -37,10 +38,14 @@ if __name__ == '__main__':
     x = x.permute(0, 3, 1, 2)
 
     model = CSPNet_p3p4p5()
-    model.load_keras_weights('temp.hdf5')
+    load_keras_weights(model, 'temp.hdf5')
     model.to(device).eval()
 
-    x = model(x)
+    x_cls, x_reg, x_off = model(x)
 
-    print(x.shape)
-    print(x)
+    print('cls----', x_cls.shape)
+    print(x_cls)
+    print('reg----', x_reg.shape)
+    print(x_reg)
+    print('off----', x_off.shape)
+    print(x_off)
