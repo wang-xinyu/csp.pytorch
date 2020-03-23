@@ -1,8 +1,8 @@
 import torch
 import math
 import torch.nn as nn
-from l2norm import L2Norm
-from samepad import SamePad2d
+from .l2norm import L2Norm
+from .samepad import SamePad2d
 
 class IdentityBlock(nn.Module):
     expansion = 4
