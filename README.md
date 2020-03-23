@@ -39,7 +39,7 @@ The out.jpg as follows will be generated.
 <img src="https://user-images.githubusercontent.com/15235574/77291176-abf7ae00-6d18-11ea-9c11-dd65c7d69507.jpg">
 </p>
 
-## Test Caltech
+## Eval Caltech
 
 We still use net_e82_l0.00850005054218.hdf5 above.
 
@@ -55,6 +55,8 @@ data
             ...
             set10_V011_I01709.jpg
 ```
+
+Get `AS.mat` from [liuwei16/CSP](https://github.com/liuwei16/CSP/blob/master/eval_caltech/AS.mat), put into `eval_caltech/`
 
 Then run test_caltech.py to generate results, and use octave to run eval and get MR.
 

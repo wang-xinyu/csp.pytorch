@@ -4,5 +4,6 @@ log*
 *.jpg
 eval_caltech/toolbox
 eval_caltech/ResultsEval
+eval_caltech/AS.mat
 output
 data
