@@ -2,3 +2,7 @@ __pycache__/
 *.hdf5
 log*
 *.jpg
+eval_caltech/toolbox
+eval_caltech/ResultsEval
+output
+data

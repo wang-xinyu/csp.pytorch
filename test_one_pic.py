@@ -19,7 +19,7 @@ if __name__ == '__main__':
     x = x.permute(0, 3, 1, 2)
 
     model = CSPNet_p3p4p5()
-    load_keras_weights(model, 'temp.hdf5')
+    load_keras_weights(model, 'net_e82_l0.00850005054218.hdf5')
     model.to(device).eval()
 
     x_cls, x_reg, x_off = model(x)
