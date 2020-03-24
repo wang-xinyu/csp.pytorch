@@ -20,7 +20,7 @@ still working in progress...
 
 ## Test One Picture
 
-Download trained weights from authors' baidu netdisk [BaiduYun](https://pan.baidu.com/s/1SSPQnbDP6zf9xf8eCDi3Fw) (Code: jcgd).
+Download trained weights from Wei Liu's baidu netdisk [BaiduYun](https://pan.baidu.com/s/1SSPQnbDP6zf9xf8eCDi3Fw) (Code: jcgd).
 
 For this test, we are using ResNet-50 initialized from CityPersons: Height+Offset prediciton: model_CSP/caltech/fromcity/net_e82_l0.00850005054218.hdf5
 
@@ -63,11 +63,45 @@ Then run test_caltech.py to generate results, and use octave to run eval and get
 ```
 python test_caltech.py
 cd eval_caltech/
+git clone https://github.com/pdollar/toolbox.git
 sudo apt install octave
 octave-cli
    -> dbEval
 ```
 
 A result file `eval_caltech/ResultsEval/eval-newReasonable.txt` will generated.
+
+## Eval CityPersons
+
+For this test, we are using Height+Offset prediction: model_CSP/cityperson/withoffset/net_e121_l0.hdf5, download it from the baidu link above.
+
+Put citypersons images in `data/citypersons/`. The dir tree is as below.
+
+```
+data
+    citypersons
+        leftImg8bit
+            train
+                aachen
+                bochum
+                ...
+                zurich
+            val
+                frankfurt
+                lindau
+                munster
+```
+
+Then run test_city.py to generate results, and run eval and get MR.
+
+```
+python test_city.py
+cd eval_city/
+python dt_txt2json.py
+cd eval_script/
+python eval_demo.py
+```
+
+
 
 
