@@ -18,7 +18,7 @@ still working in progress...
 - python3.6
 - pytorch1.4.0
 
-## Test One Picture
+## Test One Picture Pedestrian
 
 Download trained weights from Wei Liu's baidu netdisk [BaiduYun](https://pan.baidu.com/s/1SSPQnbDP6zf9xf8eCDi3Fw) (Code: jcgd).
 
@@ -30,7 +30,7 @@ We'll use this keras hdf5 weights, and load it in pytorch, and run inference.
 git clone https://github.com/wang-xinyu/csp.pytorch
 cd csp.pytorch
 // put net_e82_l0.00850005054218.hdf5 here
-python test_one_pic.py
+python test_one_pic_pedestrian.py
 ```
 
 The out.jpg as follows will be generated.
@@ -101,6 +101,26 @@ python dt_txt2json.py
 cd eval_script/
 python eval_demo.py
 ```
+
+## Test One Picture Face
+
+Download trained weights from Wei Liu's baidu netdisk [BaiduYun](https://pan.baidu.com/s/1SSPQnbDP6zf9xf8eCDi3Fw) (Code: jcgd).
+
+For this test, we are using ResNet-50 Height+Width+Offset prediction: model_CSP/widerface/net_e382_l0.hdf5
+We'll use this keras hdf5 weights, and load it in pytorch, and run inference.
+
+```
+cd csp.pytorch
+// put net_e382_l0.hdf5 here
+wget https://github.com/TencentYoutuResearch/FaceDetection-DSFD/raw/master/data/worlds-largest-selfie.jpg
+python test_one_pic_face.py
+```
+
+The out.jpg as follows will be generated.
+
+<p align="center">
+<img src="https://user-images.githubusercontent.com/15235574/77733888-94833280-7042-11ea-9e84-93c32818bf7b.jpg">
+</p>
 
 
 

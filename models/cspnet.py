@@ -80,7 +80,7 @@ class ConvBlock(nn.Module):
 
 
 class CSPNet_p3p4p5(nn.Module):
-    def __init__(self):
+    def __init__(self, num_scale=1):
         super(CSPNet_p3p4p5, self).__init__()
 
         #resnet = resnet50(pretrained=True, receptive_keep=True)
@@ -130,7 +130,7 @@ class CSPNet_p3p4p5(nn.Module):
         self.feat_bn = nn.BatchNorm2d(256, eps=1e-03, momentum=0.01)
 
         self.center_conv = nn.Conv2d(256, 1, kernel_size=1)
-        self.height_conv = nn.Conv2d(256, 1, kernel_size=1)
+        self.height_conv = nn.Conv2d(256, num_scale, kernel_size=1)
         self.offset_conv = nn.Conv2d(256, 2, kernel_size=1)
 
         nn.init.xavier_normal_(self.feat.weight)
